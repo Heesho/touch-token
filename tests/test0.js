@@ -68,5 +68,28 @@ describe("TouchToken Tests", function () {
 
     const balance = await touch.balanceOf(user1.address, 1);
     expect(balance).to.eq(1);
+
+    await expect(
+      touch.connect(user2).touch(user2.address, message, { r, s, v })
+    ).to.be.revertedWith("TouchToken__Unauthorized");
+
+    await expect(
+      touch.connect(user1).touch(user1.address, message, { r, s, v })
+    ).to.be.revertedWith("TouchToken__AlreadyTouched");
+
+    // forward time by 1 hour
+    await ethers.provider.send("evm_increaseTime", [3600]);
+    await ethers.provider.send("evm_mine");
+
+    await touch.connect(user1).touch(user1.address, message, { r, s, v });
+
+    console.log(
+      "User1 touch0 balance: ",
+      await touch.balanceOf(user1.address, 1)
+    );
+    console.log(
+      "User2 touch0 balance: ",
+      await touch.balanceOf(user2.address, 1)
+    );
   });
 });

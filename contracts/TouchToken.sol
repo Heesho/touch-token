@@ -31,7 +31,7 @@ contract TouchToken is ERC1155, Ownable, EIP712 {
 
     // Events for logging important actions
     event TouchToken__Registered(uint256 indexed tokenId, address owner, address touchId);
-    event TouchToken__Touched(uint256 indexed tokenId, address account);
+    event TouchToken__Touched(uint256 indexed tokenId, address account, string message);
 
     // Custom errors
     error TouchToken__InvalidId();
@@ -77,7 +77,7 @@ contract TouchToken is ERC1155, Ownable, EIP712 {
         
         tokenId_Account_Timestamp[tokenId][account] = block.timestamp;
         _mint(account, tokenId, 1, "");
-        emit TouchToken__Touched(tokenId, account);
+        emit TouchToken__Touched(tokenId, account, message);
     }
 
     function uri(uint256 tokenId) public view override returns (string memory) {

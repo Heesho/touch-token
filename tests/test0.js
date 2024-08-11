@@ -64,7 +64,7 @@ describe("TouchToken Tests", function () {
       touch.connect(user1).touch(user1.address, message, { r, s, v })
     )
       .to.emit(touch, "TouchToken__Touched")
-      .withArgs(1, user1.address);
+      .withArgs(1, user1.address, message);
 
     const balance = await touch.balanceOf(user1.address, 1);
     expect(balance).to.eq(1);

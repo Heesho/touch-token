@@ -1,15 +1,16 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-let owner, user0, user1, user2, touch0, owner0;
+let owner, user1, user2, touch0, touch1, owner0, owner1;
 let touch;
-let user0Nonce, user1Nonce, user2Nonce;
+let user1Nonce, user2Nonce;
 let domain, types;
 let value, signature, v, r, s;
 
 describe("TouchToken Tests", function () {
   before(async function () {
-    [owner, user0, user1, user2, touch0, owner0] = await ethers.getSigners();
+    [owner, user1, user2, touch0, touch1, owner0, owner1] =
+      await ethers.getSigners();
 
     const touchArtifact = await ethers.getContractFactory("TouchToken");
     touch = await touchArtifact.deploy();
@@ -152,6 +153,119 @@ describe("TouchToken Tests", function () {
     console.log(
       "User2 touch0 balance: ",
       await touch.balanceOf(user2.address, 1)
+    );
+  });
+
+  it("Should mint a TouchToken for user1", async function () {
+    const message = "Touching the token";
+
+    // Get the current nonce for user1
+    user1Nonce = await touch.account_Nonce(user1.address);
+
+    // Define the value to be signed
+    value = {
+      account: user1.address,
+      nonce: user1Nonce.toString(),
+      message: message,
+    };
+
+    // Sign the structured data
+    signature = await touch0._signTypedData(domain, types, value);
+    ({ v, r, s } = ethers.utils.splitSignature(signature));
+
+    // Perform the first valid touch
+    await expect(
+      touch.connect(user2).touch(user2.address, message, { r, s, v })
+    ).to.be.revertedWith("TouchToken__Unauthorized");
+
+    console.log(
+      "User1 touch0 balance: ",
+      await touch.balanceOf(user1.address, 1)
+    );
+    console.log(
+      "User2 touch0 balance: ",
+      await touch.balanceOf(user2.address, 1)
+    );
+  });
+
+  it("Should mint a TouchToken for user1", async function () {
+    const message = "Touching the token";
+
+    // Get the current nonce for user1
+    user2Nonce = await touch.account_Nonce(user2.address);
+
+    // Define the value to be signed
+    value = {
+      account: user2.address,
+      nonce: user2Nonce.toString(),
+      message: message,
+    };
+
+    // Sign the structured data
+    signature = await touch0._signTypedData(domain, types, value);
+    ({ v, r, s } = ethers.utils.splitSignature(signature));
+
+    // Perform the first valid touch
+    await touch.connect(user2).touch(user2.address, message, { r, s, v });
+
+    console.log(
+      "User1 touch0 balance: ",
+      await touch.balanceOf(user1.address, 1)
+    );
+    console.log(
+      "User2 touch0 balance: ",
+      await touch.balanceOf(user2.address, 1)
+    );
+  });
+
+  it("Should register a new TouchToken", async function () {
+    await touch
+      .connect(owner1)
+      .register(
+        owner1.address,
+        touch1.address,
+        "Touch1",
+        "https://example.com/touch1.json",
+        0
+      );
+
+    const tokenData = await touch.tokenId_TouchData(2);
+    expect(tokenData.owner).to.eq(owner1.address);
+    expect(tokenData.uri).to.eq("https://example.com/touch1.json");
+    expect(tokenData.duration).to.eq(0);
+  });
+
+  it("Should mint a TouchToken for user1", async function () {
+    const message = "Touching the token";
+
+    // Get the current nonce for user1
+    user1Nonce = await touch.account_Nonce(user1.address);
+
+    // Define the value to be signed
+    value = {
+      account: user1.address,
+      nonce: user1Nonce.toString(),
+      message: message,
+    };
+
+    // Sign the structured data
+    signature = await touch1._signTypedData(domain, types, value);
+    ({ v, r, s } = ethers.utils.splitSignature(signature));
+
+    // Perform the first valid touch
+    await touch.connect(user1).touch(user1.address, message, { r, s, v });
+
+    const balance = await touch.balanceOf(user1.address, 2);
+    expect(balance).to.eq(1);
+
+    console.log(
+      "User1 touch0 balance: ",
+      await touch.balanceOf(user1.address, 1)
+    );
+
+    console.log(
+      "User1 touch1 balance: ",
+      await touch.balanceOf(user1.address, 2)
     );
   });
 });

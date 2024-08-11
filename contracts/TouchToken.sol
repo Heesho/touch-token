@@ -71,8 +71,8 @@ contract TouchToken is ERC1155, Ownable, EIP712 {
                 abi.encode(TOUCH_TYPEHASH, account, nonce, keccak256(bytes(message)))
             )
         );
-        address touch = ECDSA.recover(digest, sig.v, sig.r, sig.s);
-        uint256 tokenId = touchId_tokenId[touch];
+        address touched = ECDSA.recover(digest, sig.v, sig.r, sig.s);
+        uint256 tokenId = touchId_tokenId[touched];
         if (tokenId == 0) revert TouchToken__Unauthorized();
         if (tokenId_Account_Timestamp[tokenId][account] + tokenId_TouchData[tokenId].duration >= block.timestamp) revert TouchToken__AlreadyTouched();
         

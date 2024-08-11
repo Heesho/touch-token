@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 
 contract TouchToken is ERC1155, Ownable, EIP712 {
 
-    bytes32 public constant TOUCH_TYPEHASH = keccak256("Touch(address account, string message)");
+    bytes32 public constant TOUCH_TYPEHASH = keccak256("Touch(address account,string message)");
 
     struct ECDSASignature {
         bytes32 r;
@@ -51,7 +51,7 @@ contract TouchToken is ERC1155, Ownable, EIP712 {
         string memory name,
         string memory uri,
         uint256 duration
-    ) external onlyOwner {
+    ) external {
         if (touchId_tokenId[touchId] != 0) revert TouchToken__AlreadyRegistered();
         currentIndex++;
         TouchData memory touchData = TouchData(touchId, owner, duration, name, uri);

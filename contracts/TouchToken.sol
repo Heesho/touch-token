@@ -8,80 +8,75 @@ import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 
 contract TouchToken is ERC1155, Ownable, EIP712 {
 
-    bytes32 public constant TOUCH_TYPEHASH = keccak256("Touch(uint256 tokenId, address account, uint256 nonce, string message)");
+    bytes32 public constant TOUCH_TYPEHASH = keccak256("Touch(address account, string message)");
+
+    struct ECDSASignature {
+        bytes32 r;
+        bytes32 s;
+        uint8 v;
+    }
 
     struct TouchData {
+        address touchId;
         address owner;
-        address minter;
+        uint256 duration;
         string name;
         string uri;
-        uint256 duration;
     }
 
     uint256 public currentIndex = 0;
     mapping(uint256 => TouchData) public tokenId_TouchData;
-    mapping(address => uint256) public minter_Nonce;
+    mapping(address => uint256) public touchId_tokenId;
     mapping(uint256 => mapping(address => uint256)) public tokenId_Account_Timestamp;
 
     // Events for logging important actions
-    event TouchToken__Created(uint256 indexed tokenId, address owner, address minter);
+    event TouchToken__Registered(uint256 indexed tokenId, address owner, address touchId);
     event TouchToken__Touched(uint256 indexed tokenId, address account);
 
     // Custom errors
     error TouchToken__InvalidId();
     error TouchToken__Unauthorized();
     error TouchToken__AlreadyTouched();
+    error TouchToken__AlreadyRegistered();
     error TouchToken__InvalidNonce();
 
-    constructor(string memory name, string memory version) ERC1155("") EIP712(name, version) {}
+    constructor() 
+        ERC1155("") 
+        EIP712("TouchToken", "1") 
+    {}
 
-    function create(
+    function register(
         address owner,
-        address minter,
+        address touchId,
         string memory name,
         string memory uri,
         uint256 duration
     ) external onlyOwner {
+        if (touchId_tokenId[touchId] != 0) revert TouchToken__AlreadyRegistered();
         currentIndex++;
-        TouchData memory touchData = TouchData(owner, minter, name, uri, duration);
+        TouchData memory touchData = TouchData(touchId, owner, duration, name, uri);
         tokenId_TouchData[currentIndex] = touchData;
-        emit TouchToken__Created(currentIndex, owner, minter);
-    } 
+        touchId_tokenId[touchId] = currentIndex;
+        emit TouchToken__Registered(currentIndex, owner, touchId);
+    }
 
     function touch(
-        uint256 tokenId, 
         address account, 
-        bytes memory data, 
         string calldata message, 
-        bytes memory signature
+        ECDSASignature calldata sig
     ) external {
-        if (tokenId == 0 || tokenId > currentIndex) revert TouchToken__InvalidId();
-        if (tokenId_Account_Timestamp[tokenId][account] + tokenId_TouchData[tokenId].duration >= block.timestamp) revert TouchToken__AlreadyTouched();
-
-        // Get the current nonce for the minter
-        uint256 currentNonce = minter_Nonce[tokenId_TouchData[tokenId].minter];
-
-        // Create the hash of the data for signature verification
-        bytes32 digest = _hashTypedDataV4(keccak256(
-            abi.encode(
-                TOUCH_TYPEHASH,
-                tokenId,
-                account,
-                currentNonce,
-                keccak256(bytes(message))
+        bytes32 digest = _hashTypedDataV4(
+            keccak256(
+                abi.encode(TOUCH_TYPEHASH, account, keccak256(bytes(message)))
             )
-        ));
-
-        // Recover the signer from the signature
-        address signer = ECDSA.recover(digest, signature);
-        if (signer != tokenId_TouchData[tokenId].minter) revert TouchToken__Unauthorized();
-
-        // Increment the nonce for the minter to prevent replay attacks
-        minter_Nonce[tokenId_TouchData[tokenId].minter]++;
-
-        // Update the last touched timestamp and mint the token
+        );
+        address touch = ECDSA.recover(digest, sig.v, sig.r, sig.s);
+        uint256 tokenId = touchId_tokenId[touch];
+        if (tokenId == 0) revert TouchToken__Unauthorized();
+        if (tokenId_Account_Timestamp[tokenId][account] + tokenId_TouchData[tokenId].duration >= block.timestamp) revert TouchToken__AlreadyTouched();
+        
         tokenId_Account_Timestamp[tokenId][account] = block.timestamp;
-        _mint(account, tokenId, 1, data);
+        _mint(account, tokenId, 1, "");
         emit TouchToken__Touched(tokenId, account);
     }
 

@@ -47,13 +47,13 @@ contract TouchToken is ERC1155, Ownable, EIP712 {
     function register(
         address owner,
         address touchId,
-        string memory name,
-        string memory uri,
+        string memory touchName,
+        string memory touchUri,
         uint256 duration
     ) external {
         if (touchId_tokenId[touchId] != 0) revert TouchToken__AlreadyRegistered();
         currentIndex++;
-        TouchData memory touchData = TouchData(touchId, owner, duration, name, uri);
+        TouchData memory touchData = TouchData(touchId, owner, duration, touchName, touchUri);
         tokenId_TouchData[currentIndex] = touchData;
         touchId_tokenId[touchId] = currentIndex;
         emit TouchToken__Registered(currentIndex, owner, touchId);
@@ -80,6 +80,20 @@ contract TouchToken is ERC1155, Ownable, EIP712 {
         tokenId_Account_Timestamp[tokenId][account] = block.timestamp;
         _mint(account, tokenId, 1, "");
         emit TouchToken__Touched(tokenId, account, message);
+    }
+
+    function updateTouchData(
+        uint256 tokenId,
+        address owner,
+        uint256 duration,
+        string memory touchName,
+        string memory touchUri
+    ) external {
+        if (msg.sender != tokenId_TouchData[tokenId].owner) revert TouchToken__Unauthorized();
+        tokenId_TouchData[tokenId].owner = owner;
+        tokenId_TouchData[tokenId].duration = duration;
+        tokenId_TouchData[tokenId].name = touchName;
+        tokenId_TouchData[tokenId].uri = touchUri;
     }
 
     function uri(uint256 tokenId) public view override returns (string memory) {

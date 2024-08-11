@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 
 contract TouchToken is ERC1155, Ownable, EIP712 {
 
-    bytes32 public constant TOUCH_TYPEHASH = keccak256("Touch(address account,string message)");
+    bytes32 public constant TOUCH_TYPEHASH = keccak256("Touch(address account,uint256 nonce,string message)");
 
     struct ECDSASignature {
         bytes32 r;
@@ -27,13 +27,12 @@ contract TouchToken is ERC1155, Ownable, EIP712 {
     uint256 public currentIndex = 0;
     mapping(uint256 => TouchData) public tokenId_TouchData;
     mapping(address => uint256) public touchId_tokenId;
+    mapping(address => uint256) public account_Nonce;
     mapping(uint256 => mapping(address => uint256)) public tokenId_Account_Timestamp;
 
-    // Events for logging important actions
     event TouchToken__Registered(uint256 indexed tokenId, address owner, address touchId);
     event TouchToken__Touched(uint256 indexed tokenId, address account, string message);
 
-    // Custom errors
     error TouchToken__InvalidId();
     error TouchToken__Unauthorized();
     error TouchToken__AlreadyTouched();
@@ -65,9 +64,11 @@ contract TouchToken is ERC1155, Ownable, EIP712 {
         string calldata message, 
         ECDSASignature calldata sig
     ) external {
+        uint256 nonce = account_Nonce[account];
+
         bytes32 digest = _hashTypedDataV4(
             keccak256(
-                abi.encode(TOUCH_TYPEHASH, account, keccak256(bytes(message)))
+                abi.encode(TOUCH_TYPEHASH, account, nonce, keccak256(bytes(message)))
             )
         );
         address touch = ECDSA.recover(digest, sig.v, sig.r, sig.s);
@@ -75,6 +76,7 @@ contract TouchToken is ERC1155, Ownable, EIP712 {
         if (tokenId == 0) revert TouchToken__Unauthorized();
         if (tokenId_Account_Timestamp[tokenId][account] + tokenId_TouchData[tokenId].duration >= block.timestamp) revert TouchToken__AlreadyTouched();
         
+        account_Nonce[account]++;
         tokenId_Account_Timestamp[tokenId][account] = block.timestamp;
         _mint(account, tokenId, 1, "");
         emit TouchToken__Touched(tokenId, account, message);

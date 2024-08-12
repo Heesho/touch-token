@@ -6,6 +6,15 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 
+// ToDo: 
+// - Change this contract to a TouchBadge
+// - Add a TouchToken contract that is a ERC20 token
+// - Mint 1 token for each touch (settable)
+// - 10% goes to creator, 10% goes to owner, 80% goes to toucher
+// - Make touch pads stealable: half surplus to prev owner, other half burned
+// - Get rid of message in touch function
+// - Can steal from anywhere
+
 contract TouchToken is ERC1155, Ownable, EIP712 {
 
     bytes32 public constant TOUCH_TYPEHASH = keccak256("Touch(address account,uint256 nonce,string message)");

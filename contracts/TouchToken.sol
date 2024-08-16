@@ -13,7 +13,9 @@ contract TouchToken is ERC20, Ownable {
 
     error Units__NotAuthorized();
 
-    event MinterSet(address minter, bool flag);
+    event TouchToken__MinterSet(address indexed minter, bool flag);
+    event TouchToken__Minted(address indexed minter, address indexed account, uint256 amount);
+    event TouchToken__Burned(address indexed minter, address indexed account, uint256 amount);
 
     modifier onlyMinter() {
         if (!minters[msg.sender]) revert Units__NotAuthorized();
@@ -24,14 +26,16 @@ contract TouchToken is ERC20, Ownable {
 
     function mint(address account, uint256 amount) external onlyMinter {
         _mint(account, amount);
+        emit TouchToken__Minted(msg.sender, account, amount);
     }
 
     function burn(address account, uint256 amount) external onlyMinter {
         _burn(account, amount);
+        emit TouchToken__Burned(msg.sender, account, amount);
     }
 
     function setMinter(address minter, bool flag) external onlyOwner {
         minters[minter] = flag;
-        emit MinterSet(minter, flag);
+        emit TouchToken__MinterSet(minter, flag);
     }
 }

@@ -11,10 +11,6 @@ interface ITouchToken {
     function burn(address account, uint256 amount) external;
 }
 
-// ToDo: 
-// - Make touch pads stealable: half surplus to prev owner, other half burned
-// - Can steal from anywhere
-
 contract TouchBadge is ERC1155, Ownable, EIP712 {
 
     bytes32 public constant TOUCH_TYPEHASH = keccak256("Touch(address account,uint256 nonce)");
@@ -48,7 +44,7 @@ contract TouchBadge is ERC1155, Ownable, EIP712 {
     mapping(address => uint256) public account_Nonce;
     mapping(uint256 => mapping(address => uint256)) public tokenId_Account_Timestamp;
 
-    event TouchBadge__Registered(uint256 indexed tokenId, address owner, address touchId);
+    event TouchBadge__Registered(uint256 indexed tokenId, address owner, address touch);
     event TouchBadge__Touched(uint256 indexed tokenId, address account);
     event TouchBadge__Stolen(uint256 indexed tokenId, address newOwner, address prevOwner, uint256 price);
 
@@ -67,16 +63,16 @@ contract TouchBadge is ERC1155, Ownable, EIP712 {
 
     function register(
         address owner,
-        address touchId,
+        address touch,
         string memory touchName,
         string memory touchUri
     ) external {
-        if (touch_TokenId[touchId] != 0) revert TouchBadge__AlreadyRegistered();
+        if (touch_TokenId[touch] != 0) revert TouchBadge__AlreadyRegistered();
         currentIndex++;
-        TouchData memory touchData = TouchData(touchId, owner, owner, 0, touchName, touchUri);
+        TouchData memory touchData = TouchData(touch, owner, owner, 0, touchName, touchUri);
         tokenId_TouchData[currentIndex] = touchData;
-        touch_TokenId[touchId] = currentIndex;
-        emit TouchBadge__Registered(currentIndex, owner, touchId);
+        touch_TokenId[touch] = currentIndex;
+        emit TouchBadge__Registered(currentIndex, owner, touch);
     }
 
     function touch(
@@ -136,11 +132,15 @@ contract TouchBadge is ERC1155, Ownable, EIP712 {
         tokenId_TouchData[tokenId].uri = touchUri;
     }
 
-    function uri(uint256 tokenId) public view override returns (string memory) {
+    function uri(
+        uint256 tokenId
+    ) public view override returns (string memory) {
         return tokenId_TouchData[tokenId].uri;
     }
 
-    function getPrice(uint256 tokenId) public view returns (uint256) {
+    function getPrice(
+        uint256 tokenId
+    ) public view returns (uint256) {
         return tokenId_TouchData[tokenId].price * 120 / 100 + 0.001 ether;
     }
 }

@@ -7,17 +7,17 @@ let user1Nonce, user2Nonce;
 let domain, types;
 let value, signature, v, r, s;
 
-describe("TouchToken Tests", function () {
+describe("TouchBadge Tests", function () {
   before(async function () {
     [owner, user1, user2, touch0, touch1, owner0, owner1] =
       await ethers.getSigners();
 
-    const touchArtifact = await ethers.getContractFactory("TouchToken");
+    const touchArtifact = await ethers.getContractFactory("TouchBadge");
     touch = await touchArtifact.deploy();
     await touch.deployed();
 
     domain = {
-      name: "TouchToken",
+      name: "TouchBadge",
       version: "1",
       chainId: await ethers.provider.getNetwork().then((n) => n.chainId),
       verifyingContract: touch.address,
@@ -27,12 +27,11 @@ describe("TouchToken Tests", function () {
       Touch: [
         { name: "account", type: "address" },
         { name: "nonce", type: "uint256" },
-        { name: "message", type: "string" },
       ],
     };
   });
 
-  it("Should register a new TouchToken", async function () {
+  it("Should register a new TouchBadge", async function () {
     await touch.connect(owner0).register(
       owner0.address,
       touch0.address,
@@ -47,9 +46,7 @@ describe("TouchToken Tests", function () {
     expect(tokenData.duration).to.eq(3600);
   });
 
-  it("Should mint a TouchToken for user1", async function () {
-    const message = "Touching the token";
-
+  it("Should mint a TouchBadge for user1", async function () {
     // Get the current nonce for user1
     user1Nonce = await touch.account_Nonce(user1.address);
 
@@ -57,7 +54,6 @@ describe("TouchToken Tests", function () {
     value = {
       account: user1.address,
       nonce: user1Nonce.toString(),
-      message: message,
     };
 
     // Sign the structured data
@@ -65,11 +61,9 @@ describe("TouchToken Tests", function () {
     ({ v, r, s } = ethers.utils.splitSignature(signature));
 
     // Perform the first valid touch
-    await expect(
-      touch.connect(user1).touch(user1.address, message, { r, s, v })
-    )
-      .to.emit(touch, "TouchToken__Touched")
-      .withArgs(1, user1.address, message);
+    await expect(touch.connect(user1).touch(user1.address, { r, s, v }))
+      .to.emit(touch, "TouchBadge__Touched")
+      .withArgs(1, user1.address);
 
     const balance = await touch.balanceOf(user1.address, 1);
     expect(balance).to.eq(1);
@@ -84,9 +78,7 @@ describe("TouchToken Tests", function () {
     );
   });
 
-  it("Should revert with 'TouchToken__AlreadyTouched' if the token is touched within the cooldown period", async function () {
-    const message = "Touching the token";
-
+  it("Should revert with 'TouchBadge__AlreadyTouched' if the token is touched within the cooldown period", async function () {
     // Get the current nonce for user1
     user1Nonce = await touch.account_Nonce(user1.address);
 
@@ -94,7 +86,6 @@ describe("TouchToken Tests", function () {
     value = {
       account: user1.address,
       nonce: user1Nonce.toString(),
-      message: message,
     };
 
     // Sign the structured data
@@ -103,8 +94,8 @@ describe("TouchToken Tests", function () {
 
     // Attempt to touch the token again within the cooldown period
     await expect(
-      touch.connect(user1).touch(user1.address, message, { r, s, v })
-    ).to.be.revertedWith("TouchToken__AlreadyTouched");
+      touch.connect(user1).touch(user1.address, { r, s, v })
+    ).to.be.revertedWith("TouchBadge__AlreadyTouched");
 
     console.log(
       "User1 touch0 balance: ",
@@ -123,10 +114,8 @@ describe("TouchToken Tests", function () {
   });
 
   it("User1 mints another touch0", async function () {
-    const message = "Touching the token";
-
     // Attempt to touch the token again within the cooldown period
-    await touch.connect(user1).touch(user1.address, message, { r, s, v });
+    await touch.connect(user1).touch(user1.address, { r, s, v });
 
     console.log(
       "User1 touch0 balance: ",
@@ -139,12 +128,10 @@ describe("TouchToken Tests", function () {
   });
 
   it("User1 mints another touch0", async function () {
-    const message = "Touching the token";
-
     // Attempt to touch the token again within the cooldown period
     await expect(
-      touch.connect(user1).touch(user1.address, message, { r, s, v })
-    ).to.be.revertedWith("TouchToken__Unauthorized");
+      touch.connect(user1).touch(user1.address, { r, s, v })
+    ).to.be.revertedWith("TouchBadge__Unauthorized");
 
     console.log(
       "User1 touch0 balance: ",
@@ -156,9 +143,7 @@ describe("TouchToken Tests", function () {
     );
   });
 
-  it("Should mint a TouchToken for user1", async function () {
-    const message = "Touching the token";
-
+  it("Should mint a TouchBadge for user1", async function () {
     // Get the current nonce for user1
     user1Nonce = await touch.account_Nonce(user1.address);
 
@@ -166,7 +151,6 @@ describe("TouchToken Tests", function () {
     value = {
       account: user1.address,
       nonce: user1Nonce.toString(),
-      message: message,
     };
 
     // Sign the structured data
@@ -175,8 +159,8 @@ describe("TouchToken Tests", function () {
 
     // Perform the first valid touch
     await expect(
-      touch.connect(user2).touch(user2.address, message, { r, s, v })
-    ).to.be.revertedWith("TouchToken__Unauthorized");
+      touch.connect(user2).touch(user2.address, { r, s, v })
+    ).to.be.revertedWith("TouchBadge__Unauthorized");
 
     console.log(
       "User1 touch0 balance: ",
@@ -188,9 +172,7 @@ describe("TouchToken Tests", function () {
     );
   });
 
-  it("Should mint a TouchToken for user1", async function () {
-    const message = "Touching the token";
-
+  it("Should mint a TouchBadge for user1", async function () {
     // Get the current nonce for user1
     user2Nonce = await touch.account_Nonce(user2.address);
 
@@ -198,7 +180,6 @@ describe("TouchToken Tests", function () {
     value = {
       account: user2.address,
       nonce: user2Nonce.toString(),
-      message: message,
     };
 
     // Sign the structured data
@@ -206,7 +187,7 @@ describe("TouchToken Tests", function () {
     ({ v, r, s } = ethers.utils.splitSignature(signature));
 
     // Perform the first valid touch
-    await touch.connect(user2).touch(user2.address, message, { r, s, v });
+    await touch.connect(user2).touch(user2.address, { r, s, v });
 
     console.log(
       "User1 touch0 balance: ",
@@ -218,7 +199,7 @@ describe("TouchToken Tests", function () {
     );
   });
 
-  it("Should register a new TouchToken", async function () {
+  it("Should register a new TouchBadge", async function () {
     await touch
       .connect(owner1)
       .register(
@@ -235,9 +216,7 @@ describe("TouchToken Tests", function () {
     expect(tokenData.duration).to.eq(0);
   });
 
-  it("Should mint a TouchToken for user1", async function () {
-    const message = "Touching the token";
-
+  it("Should mint a TouchBadge for user1", async function () {
     // Get the current nonce for user1
     user1Nonce = await touch.account_Nonce(user1.address);
 
@@ -245,7 +224,6 @@ describe("TouchToken Tests", function () {
     value = {
       account: user1.address,
       nonce: user1Nonce.toString(),
-      message: message,
     };
 
     // Sign the structured data
@@ -253,7 +231,7 @@ describe("TouchToken Tests", function () {
     ({ v, r, s } = ethers.utils.splitSignature(signature));
 
     // Perform the first valid touch
-    await touch.connect(user1).touch(user1.address, message, { r, s, v });
+    await touch.connect(user1).touch(user1.address, { r, s, v });
 
     const balance = await touch.balanceOf(user1.address, 2);
     expect(balance).to.eq(1);

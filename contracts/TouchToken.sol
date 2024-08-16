@@ -1,111 +1,37 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 
-// ToDo: 
-// - Change this contract to a TouchBadge
-// - Add a TouchToken contract that is a ERC20 token
-// - Mint 1 token for each touch (settable)
-// - 10% goes to creator, 10% goes to owner, 80% goes to toucher
-// - Make touch pads stealable: half surplus to prev owner, other half burned
-// - Get rid of message in touch function
-// - Can steal from anywhere
+contract TouchToken is ERC20, Ownable {
 
-contract TouchToken is ERC1155, Ownable, EIP712 {
+    mapping(address => bool) public minters;
 
-    bytes32 public constant TOUCH_TYPEHASH = keccak256("Touch(address account,uint256 nonce,string message)");
+    error Units__NotAuthorized();
 
-    struct ECDSASignature {
-        bytes32 r;
-        bytes32 s;
-        uint8 v;
+    event MinterSet(address minter, bool flag);
+
+    modifier onlyMinter() {
+        if (!minters[msg.sender]) revert Units__NotAuthorized();
+        _;
     }
 
-    struct TouchData {
-        address touchId;
-        address owner;
-        uint256 duration;
-        string name;
-        string uri;
+    constructor() ERC20("TouchToken", "TOUCH") {}
+
+    function mint(address account, uint256 amount) external onlyMinter {
+        _mint(account, amount);
     }
 
-    uint256 public currentIndex = 0;
-    mapping(uint256 => TouchData) public tokenId_TouchData;
-    mapping(address => uint256) public touchId_tokenId;
-    mapping(address => uint256) public account_Nonce;
-    mapping(uint256 => mapping(address => uint256)) public tokenId_Account_Timestamp;
-
-    event TouchToken__Registered(uint256 indexed tokenId, address owner, address touchId);
-    event TouchToken__Touched(uint256 indexed tokenId, address account, string message);
-
-    error TouchToken__InvalidId();
-    error TouchToken__Unauthorized();
-    error TouchToken__AlreadyTouched();
-    error TouchToken__AlreadyRegistered();
-    error TouchToken__InvalidNonce();
-
-    constructor() 
-        ERC1155("") 
-        EIP712("TouchToken", "1") 
-    {}
-
-    function register(
-        address owner,
-        address touchId,
-        string memory touchName,
-        string memory touchUri,
-        uint256 duration
-    ) external {
-        if (touchId_tokenId[touchId] != 0) revert TouchToken__AlreadyRegistered();
-        currentIndex++;
-        TouchData memory touchData = TouchData(touchId, owner, duration, touchName, touchUri);
-        tokenId_TouchData[currentIndex] = touchData;
-        touchId_tokenId[touchId] = currentIndex;
-        emit TouchToken__Registered(currentIndex, owner, touchId);
+    function burn(address account, uint256 amount) external onlyMinter {
+        _burn(account, amount);
     }
 
-    function touch(
-        address account, 
-        string calldata message, 
-        ECDSASignature calldata sig
-    ) external {
-        uint256 nonce = account_Nonce[account];
-
-        bytes32 digest = _hashTypedDataV4(
-            keccak256(
-                abi.encode(TOUCH_TYPEHASH, account, nonce, keccak256(bytes(message)))
-            )
-        );
-        address touched = ECDSA.recover(digest, sig.v, sig.r, sig.s);
-        uint256 tokenId = touchId_tokenId[touched];
-        if (tokenId == 0) revert TouchToken__Unauthorized();
-        if (tokenId_Account_Timestamp[tokenId][account] + tokenId_TouchData[tokenId].duration >= block.timestamp) revert TouchToken__AlreadyTouched();
-        
-        account_Nonce[account]++;
-        tokenId_Account_Timestamp[tokenId][account] = block.timestamp;
-        _mint(account, tokenId, 1, "");
-        emit TouchToken__Touched(tokenId, account, message);
-    }
-
-    function updateTouchData(
-        uint256 tokenId,
-        address owner,
-        uint256 duration,
-        string memory touchName,
-        string memory touchUri
-    ) external {
-        if (msg.sender != tokenId_TouchData[tokenId].owner) revert TouchToken__Unauthorized();
-        tokenId_TouchData[tokenId].owner = owner;
-        tokenId_TouchData[tokenId].duration = duration;
-        tokenId_TouchData[tokenId].name = touchName;
-        tokenId_TouchData[tokenId].uri = touchUri;
-    }
-
-    function uri(uint256 tokenId) public view override returns (string memory) {
-        return tokenId_TouchData[tokenId].uri;
+    function setMinter(address minter, bool flag) external onlyOwner {
+        minters[minter] = flag;
+        emit MinterSet(minter, flag);
     }
 }

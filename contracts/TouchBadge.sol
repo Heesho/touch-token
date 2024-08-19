@@ -124,7 +124,7 @@ contract TouchBadge is ERC1155, Ownable, EIP712 {
         touchCache.owner = msg.sender;
 
         uint256 surplus = touchCache.price - prevPrice;
-        uint256 burnAmount = surplus * 50 / 100;
+        uint256 burnAmount = surplus * BURN_RATE / DIVISOR;
         uint256 prevOwnerAmount = prevPrice + burnAmount;
         tokenId_TouchData[tokenId] = touchCache;
 
@@ -187,6 +187,6 @@ contract TouchBadge is ERC1155, Ownable, EIP712 {
     function getPrice(
         uint256 tokenId
     ) public view returns (uint256) {
-        return tokenId_TouchData[tokenId].price * 120 / 100 + 0.001 ether;
+        return tokenId_TouchData[tokenId].price * PRICE_CHANGE / DIVISOR + INITIAL_PRICE;
     }
 }

@@ -111,6 +111,24 @@ contract TouchBadge is ERC1155, Ownable, EIP712 {
         ITouchToken(touchToken).mint(account, touchReward);
     }
 
+    function touchTest(
+        address account, 
+        uint256 tokenId
+    ) external {
+        if (tokenId == 0) revert TouchBadge__Unauthorized();
+        if (tokenId_Account_Timestamp[tokenId][account] + DURATION >= block.timestamp) revert TouchBadge__AlreadyTouched();
+        
+        account_Nonce[account]++;
+        tokenId_Account_Timestamp[tokenId][account] = block.timestamp;
+        _mint(account, tokenId, 1, "");
+
+        emit TouchBadge__Touched(tokenId, account);
+
+        ITouchToken(touchToken).mint(tokenId_TouchData[tokenId].creator, creatorReward);
+        ITouchToken(touchToken).mint(tokenId_TouchData[tokenId].owner, ownerReward);
+        ITouchToken(touchToken).mint(account, touchReward);
+    }
+
     function steal(
         uint256 tokenId
     ) external {

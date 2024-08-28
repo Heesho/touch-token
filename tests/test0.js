@@ -253,4 +253,26 @@ describe("TouchBadge Tests", function () {
       await touchBadge.balanceOf(user1.address, 2)
     );
   });
+
+  // forward time 1 day
+  it("Forward Time 1 day", async function () {
+    // Forward time by 1 hour to pass the cooldown period
+    await ethers.provider.send("evm_increaseTime", [24 * 3600]);
+    await ethers.provider.send("evm_mine");
+  });
+
+  it("Should mint a TouchBadge for user1", async function () {
+    // Perform the first valid touch
+    await touchBadge.connect(user1).touchTest(user1.address, 2);
+
+    console.log(
+      "User1 touch0 balance: ",
+      await touchBadge.balanceOf(user1.address, 1)
+    );
+
+    console.log(
+      "User1 touch1 balance: ",
+      await touchBadge.balanceOf(user1.address, 2)
+    );
+  });
 });
